@@ -1,6 +1,9 @@
 Infrastructure Deployment Guide: Highly Available Nginx Web App
 ================================================================
 
+NOTE:
+This implementation relies on the default Nginx configuration provided by the package installation. Nginx was installed and initialized using the AWS EC2 User Data feature during instance launch. No custom Nginx configuration files were modified or created as part of this setup.
+
 1. ARCHITECTURE OVERVIEW
 ------------------------
 This guide explains how to deploy a highly available and secure "Hello World" Nginx web application on AWS.
