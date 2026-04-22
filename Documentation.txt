@@ -203,6 +203,68 @@ Step 5: Listener Configuration
 
 ------------------------------------------------------------
 
+4. AWS RESOURCES CREATED
+------------------------
+
+Networking:
+- 1 VPC (Hello-World-VPC)
+- 2 Public Subnets
+- 2 Private Subnets
+- 1 Internet Gateway (HelloWorld-IGW)
+- 1 NAT Gateway (HelloWorld-NGW)
+- 2 Route Tables (Public-RT, Private-RT)
+
+Security:
+- 1 ALB Security Group (ALB-SG)
+- 1 EC2 Security Group (EC2-Private-SG)
+
+Compute:
+- 2 EC2 Instances (Ubuntu 24.04, t3.micro)
+
+Load Balancing:
+- 1 Application Load Balancer (HelloWorld-ALB)
+- 1 Target Group (HelloWorld-TG)
+
+------------------------------------------------------------
+
+5. APPLICATION CODE (HTML PAGE)
+-------------------------------
+
+Below is the HTML code served by Nginx:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-top: 100px;
+            background-color: #f4f6f8;
+        }
+        .card {
+            display: inline-block;
+            background: white;
+            padding: 40px 60px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 { color: #232f3e; }
+        p  { color: #555; font-size: 16px; }
+        strong { color: #e47911; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Hello World!</h1>
+        <p>Instance ID: <strong>{{INSTANCE_ID}}</strong></p>
+        <p>Availability Zone: <strong>{{AZ}}</strong></p>
+        <p>Served by: <strong>Nginx</strong></p>
+    </div>
+</body>
+</html>
+
 FINAL RESULT
 ------------
 - Access the application using ALB DNS
