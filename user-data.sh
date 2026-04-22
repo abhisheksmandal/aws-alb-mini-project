@@ -16,7 +16,7 @@ AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
   http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
 # Create custom HTML page
-cat > /usr/share/nginx/html/index.html <<EOF
+cat > /var/www/html/index.html <<EOF
 <!DOCTYPE html>
 <html>
 <head>

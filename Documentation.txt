@@ -1,0 +1,215 @@
+Infrastructure Deployment Guide: Highly Available Nginx Web App
+================================================================
+
+1. ARCHITECTURE OVERVIEW
+------------------------
+This guide explains how to deploy a highly available and secure "Hello World" Nginx web application on AWS.
+
+Architecture Components:
+- Custom VPC across 2 Availability Zones (ap-south-1a, ap-south-1b)
+- Public and Private Subnets
+- Internet Gateway (IGW) and NAT Gateway
+- Application Load Balancer (ALB)
+- 2 Private EC2 Instances running Nginx
+- Security Groups for controlled access
+
+------------------------------------------------------------
+
+2. PHASE 1: NETWORK & SECURITY PROVISIONING
+------------------------------------------
+
+2.1 VPC & SUBNET CREATION
+-------------------------
+Step 1: Go to AWS Console → VPC Dashboard → Create VPC
+
+Step 2: Select "VPC only"
+
+Step 3: Enter details:
+- Name: Hello-World-VPC
+- CIDR Block: 10.0.0.0/16
+
+Step 4: Create 4 Subnets:
+
+Public Subnets:
+- Public-Subnet-A
+  AZ: ap-south-1a
+  CIDR: 10.0.1.0/24
+
+- Public-Subnet-B
+  AZ: ap-south-1b
+  CIDR: 10.0.2.0/24
+
+Private Subnets:
+- Private-Subnet-A
+  AZ: ap-south-1a
+  CIDR: 10.0.3.0/24
+
+- Private-Subnet-B
+  AZ: ap-south-1b
+  CIDR: 10.0.4.0/24
+
+------------------------------------------------------------
+
+2.2 GATEWAYS & ROUTING
+----------------------
+
+Step 1: Create Internet Gateway (IGW)
+- Name: HelloWorld-IGW
+- Attach to Hello-World-VPC
+
+Step 2: Create NAT Gateway
+- Name: HelloWorld-NGW
+- Subnet: Public-Subnet-A
+- Allocate Elastic IP
+
+Step 3: Configure Route Tables
+
+Public Route Table (Public-RT):
+- Associate with:
+  - Public-Subnet-A
+  - Public-Subnet-B
+- Add Route:
+  0.0.0.0/0 → Internet Gateway (HelloWorld-IGW)
+
+Private Route Table (Private-RT):
+- Associate with:
+  - Private-Subnet-A
+  - Private-Subnet-B
+- Add Route:
+  0.0.0.0/0 → NAT Gateway (HelloWorld-NGW)
+
+------------------------------------------------------------
+
+2.3 SECURITY GROUPS
+-------------------
+
+Create ALB Security Group (ALB-SG):
+- Inbound Rules:
+  - Allow HTTP (Port 80) from 0.0.0.0/0
+
+Create EC2 Security Group (EC2-Private-SG):
+- Inbound Rules:
+  - Allow HTTP (Port 80)
+  - Source: ALB-SG
+
+------------------------------------------------------------
+
+3. PHASE 2: COMPUTE & LOAD BALANCING
+------------------------------------
+
+3.1 EC2 INSTANCE LAUNCH
+-----------------------
+
+Step 1: Launch 2 EC2 Instances
+- AMI: Ubuntu 24.04
+- Instance Type: t3.micro
+
+Step 2: Network Configuration
+- VPC: Hello-World-VPC
+- Instance 1 → Private-Subnet-A
+- Instance 2 → Private-Subnet-B
+
+Step 3: Attach Security Group
+- EC2-Private-SG
+
+Step 4: Add User Data Script:
+
+#!/bin/bash
+# Update packages
+apt update -y
+
+# Install Nginx
+apt install -y nginx
+
+# Fetch instance metadata using IMDSv2
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id)
+
+AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+# Create custom HTML page
+cat > /var/www/html/index.html <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin-top: 100px;
+            background-color: #f4f6f8;
+        }
+        .card {
+            display: inline-block;
+            background: white;
+            padding: 40px 60px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 { color: #232f3e; }
+        p  { color: #555; font-size: 16px; }
+        strong { color: #e47911; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Hello World!</h1>
+        <p>Instance ID: <strong>${INSTANCE_ID}</strong></p>
+        <p>Availability Zone: <strong>${AZ}</strong></p>
+        <p>Served by: <strong>Nginx</strong></p>
+    </div>
+</body>
+</html>
+EOF
+
+# Start and enable Nginx
+systemctl start nginx
+systemctl enable nginx
+
+------------------------------------------------------------
+
+3.2 APPLICATION LOAD BALANCER (ALB)
+-----------------------------------
+
+Step 1: Create Target Group
+- Name: HelloWorld-TG
+- Protocol: HTTP
+- Port: 80
+- Register:
+  - EC2 Instance 1
+  - EC2 Instance 2
+
+Step 2: Create Application Load Balancer
+- Name: HelloWorld-ALB
+- Scheme: Internet-facing
+
+Step 3: Network Mapping
+- Select:
+  - Public-Subnet-A
+  - Public-Subnet-B
+
+Step 4: Security Group
+- Attach: ALB-SG
+
+Step 5: Listener Configuration
+- Protocol: HTTP
+- Port: 80
+- Forward to: HelloWorld-TG
+
+------------------------------------------------------------
+
+FINAL RESULT
+------------
+- Access the application using ALB DNS
+- Traffic is load balanced across both EC2 instances
+- Instances are private and secure
+- Highly available across two Availability Zones
+
+------------------------------------------------------------
+
+END OF DOCUMENT
